@@ -14,11 +14,16 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ── Paths ──────────────────────────────────────────────────────
-DATA_PATH   = '/home/da_otcifithom/mfa-bypass-detection/data/full_dataset.csv'
-RF_PATH     = '/home/da_otcifithom/mfa-bypass-detection/models/rf_model.pkl'
-LSTM_PATH   = '/home/da_otcifithom/mfa-bypass-detection/models/lstm_model.pt'
-SCALER_PATH = '/home/da_otcifithom/mfa-bypass-detection/models/scaler.pkl'
-SPLIT_PATH  = '/home/da_otcifithom/mfa-bypass-detection/data/train_test_split_noisy.npz'
+# NOTE: these use relative paths so the script works on any machine,
+# not just the original VM. Adjust BASE_DIR only if you move the
+# project root.
+import os
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH   = os.path.join(BASE_DIR, 'data', 'full_dataset.csv')
+RF_PATH     = os.path.join(BASE_DIR, 'models', 'rf_model.pkl')
+LSTM_PATH   = os.path.join(BASE_DIR, 'models', 'lstm_model.pt')
+SCALER_PATH = os.path.join(BASE_DIR, 'models', 'scaler.pkl')
+SPLIT_PATH  = os.path.join(BASE_DIR, 'data', 'train_test_split_clean.npz')
 
 RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
@@ -34,9 +39,10 @@ FEATURE_COLS = [
 SEQ_LEN    = 10
 BATCH_SIZE = 512
 EPOCHS     = 20
+T1, T2     = 34, 67  # decision thresholds (corrected values, used consistently)
 
 print("=" * 60)
-print("PHASE 9 — RETRAIN WITH REALISTIC NOISE")
+print("PHASE 9 (CLEAN) — RETRAIN WITH REALISTIC NOISE")
 print("=" * 60)
 
 # ── Load dataset ───────────────────────────────────────────────
@@ -52,56 +58,39 @@ n_normals = len(normals)
 
 # ══════════════════════════════════════════════════════════════
 # NOISE INJECTION — ATTACK RECORDS
-# Stronger proportions to break synthetic separability
 # ══════════════════════════════════════════════════════════════
 print("\nInjecting noise into attack records...")
 
-# 1. Attacks using known browsers (30%)
-#    Real attackers use Chrome/Firefox to avoid browser-anomaly triggers
 mask = np.random.random(n_attacks) < 0.30
 attacks.loc[mask, 'browser_known'] = 1
 print(f"  [Attack] Known browser flipped   : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 2. Attacks during daytime (35%)
-#    Domestic and insider attacks occur during business hours
 mask = np.random.random(n_attacks) < 0.35
 attacks.loc[mask, 'is_night'] = 0
 attacks.loc[mask, 'hour'] = np.random.randint(9, 18, size=mask.sum())
 print(f"  [Attack] Daytime attacks          : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 3. Attack IPs not yet in threat feeds (40%)
-#    New attack infrastructure not yet indexed by threat intelligence
 mask = np.random.random(n_attacks) < 0.40
 attacks.loc[mask, 'is_attack_ip'] = 0
 print(f"  [Attack] IP not in threat feeds   : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 4. Attacks from same country as victim (25%)
-#    Domestic attacks and insider threats share victim geography
 mask = np.random.random(n_attacks) < 0.25
 attacks.loc[mask, 'country_changed'] = 0
 print(f"  [Attack] Same country             : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 5. Attacks reusing same device (20%)
-#    Some attacks use compromised device in the same location
 mask = np.random.random(n_attacks) < 0.20
 attacks.loc[mask, 'device_changed'] = 0
 print(f"  [Attack] Same device              : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 6. Attacks from victim's own ASN/ISP (20%)
-#    Attackers using victim's own ISP or VPN exit node
 mask = np.random.random(n_attacks) < 0.20
 attacks.loc[mask, 'asn_changed'] = 0
 print(f"  [Attack] Same ASN                 : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 7. Low reputation scores on attack records (35%)
-#    New attack infrastructure has no reputation history yet
 mask = np.random.random(n_attacks) < 0.35
 attacks.loc[mask, 'asn_attack_rate'] = np.random.uniform(0.0, 0.15, size=mask.sum())
 attacks.loc[mask, 'country_attack_rate'] = np.random.uniform(0.0, 0.15, size=mask.sum())
 print(f"  [Attack] Low reputation scores    : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 8. Gaussian noise on attack rate features (SD=0.12)
-#    Real attack rates fluctuate as threat feeds update
 noise = np.random.normal(0, 0.12, size=(n_attacks, 2))
 attacks[['asn_attack_rate', 'country_attack_rate']] = (
     attacks[['asn_attack_rate', 'country_attack_rate']].values + noise
@@ -113,41 +102,29 @@ print(f"  [Attack] Gaussian noise on rates  : SD=0.12, all {n_attacks:,} rows")
 # ══════════════════════════════════════════════════════════════
 print("\nInjecting noise into normal records...")
 
-# 9. Legitimate users travelling (15%)
-#    Frequent travellers trigger false deviation signals
 mask = np.random.random(n_normals) < 0.15
 normals.loc[mask, 'country_changed'] = 1
 normals.loc[mask, 'asn_changed']     = 1
 print(f"  [Normal] Travelling users         : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 10. Legitimate new device use (12%)
-#     Users regularly upgrade or switch between devices
 mask = np.random.random(n_normals) < 0.12
 normals.loc[mask, 'device_changed'] = 1
 print(f"  [Normal] New device               : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 11. Legitimate night logins (15%)
-#     Shift workers, international users, different time zones
 mask = np.random.random(n_normals) < 0.15
 normals.loc[mask, 'is_night'] = 1
 normals.loc[mask, 'hour'] = np.random.choice(
     list(range(22, 24)) + list(range(0, 7)), size=mask.sum())
 print(f"  [Normal] Night logins             : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 12. Legitimate elevated login frequency (8%)
-#     Multiple sessions, app refreshes, SSO cascades
 mask = np.random.random(n_normals) < 0.08
 normals.loc[mask, 'login_freq'] = np.random.randint(10, 21, size=mask.sum())
 print(f"  [Normal] High login freq          : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 13. Legitimate users on risky networks (10%)
-#     Shared hosting, university networks, VPN exits
 mask = np.random.random(n_normals) < 0.10
 normals.loc[mask, 'asn_attack_rate'] = np.random.uniform(0.1, 0.4, size=mask.sum())
 print(f"  [Normal] Risky network            : {mask.sum():,} rows ({mask.mean()*100:.0f}%)")
 
-# 14. Gaussian noise on normal rate features (SD=0.05)
-#     Normal baseline fluctuation in threat feed scores
 noise = np.random.normal(0, 0.05, size=(n_normals, 2))
 normals[['asn_attack_rate', 'country_attack_rate']] = (
     normals[['asn_attack_rate', 'country_attack_rate']].values + noise
@@ -168,18 +145,26 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 print(f"\nSplit: {len(X_train):,} train / {len(X_test):,} test")
 
-# ── Scale ──────────────────────────────────────────────────────
+# ── Scale (for RF/LSTM input only) ─────────────────────────────
 scaler = StandardScaler()
 X_train_s = scaler.fit_transform(X_train)
 X_test_s  = scaler.transform(X_test)
 joblib.dump(scaler, SCALER_PATH)
 print("Scaler saved.")
 
+# IMPORTANT: we save BOTH the scaled features (X_test_s, for RF/LSTM
+# input) and the raw, pre-scaling features (X_test, for the
+# contextual/behavioural fusion score, which expects 0-1 reputation
+# rates rather than standardized values). Using scaled values for the
+# fusion score was a bug identified during reproducibility testing —
+# StandardScaler output is centered near 0 with values outside [0,1]
+# and negative numbers, which silently corrupts the .clip(0,1) logic
+# in fuse_risk_score() below.
 np.savez(SPLIT_PATH,
-         X_train=X_train_s, X_test=X_test_s,
-         X_test_raw=X_test,
+         X_train_scaled=X_train_s, X_test_scaled=X_test_s,
+         X_train_raw=X_train, X_test_raw=X_test,
          y_train=y_train, y_test=y_test)
-print("Train/test arrays saved.")
+print("Train/test arrays saved (scaled + raw).")
 
 # ══════════════════════════════════════════════════════════════
 # RANDOM FOREST — RETRAIN
@@ -219,7 +204,6 @@ print(f"  AUC-ROC   : {rf_auc:.4f}")
 print(f"  FPR       : {rf_fpr*100:.2f}%")
 print(f"  TP={tp}  FP={fp}  TN={tn}  FN={fn}")
 
-# Feature importance
 importances = list(zip(FEATURE_COLS, rf.feature_importances_))
 importances.sort(key=lambda x: x[1], reverse=True)
 print("\nFeature Importances:")
@@ -227,7 +211,7 @@ for rank, (feat, imp) in enumerate(importances, 1):
     print(f"  {rank:2d}. {feat:<25s} {imp:.4f}")
 
 # ══════════════════════════════════════════════════════════════
-# LSTM — ARCHITECTURE
+# LSTM — ARCHITECTURE & RETRAIN
 # ══════════════════════════════════════════════════════════════
 class LSTMClassifier(nn.Module):
     def __init__(self, input_size, hidden_size=64, num_layers=2, dropout=0.3):
@@ -253,9 +237,6 @@ def make_sequences(X, y, seq_len):
     return np.array(Xs, dtype=np.float32), np.array(ys, dtype=np.float32)
 
 
-# ══════════════════════════════════════════════════════════════
-# LSTM — RETRAIN
-# ══════════════════════════════════════════════════════════════
 print("\n" + "=" * 60)
 print("LSTM — RETRAINING")
 print("=" * 60)
@@ -311,7 +292,6 @@ for epoch in range(1, EPOCHS + 1):
 print(f"\nBest validation loss: {best_val_loss:.4f}")
 print("LSTM model saved.")
 
-# ── LSTM Evaluation ────────────────────────────────────────────
 model.load_state_dict(torch.load(LSTM_PATH))
 model.eval()
 
@@ -353,45 +333,51 @@ print("=" * 60)
 rf_probs_aligned = rf_probs[SEQ_LEN - 1: SEQ_LEN - 1 + len(lstm_probs)]
 y_test_aligned   = y_test[SEQ_LEN - 1: SEQ_LEN - 1 + len(lstm_probs)]
 
-# Contextual and behavioural scores from test features
-X_test_raw = X_test[SEQ_LEN - 1: SEQ_LEN - 1 + len(lstm_probs)]
+# FIX: use RAW (pre-scaling) features for contextual/behavioural score,
+# not the scaled X_test_s. The fusion formula and its .clip(0,1) calls
+# assume 0-1 reputation rates, which only the raw features provide.
+X_test_raw_aligned = X_test[SEQ_LEN - 1: SEQ_LEN - 1 + len(lstm_probs)]
+
 asn_rate_idx     = FEATURE_COLS.index('asn_attack_rate')
 country_rate_idx = FEATURE_COLS.index('country_attack_rate')
 login_freq_idx   = FEATURE_COLS.index('login_freq')
 is_night_idx     = FEATURE_COLS.index('is_night')
 
-contextual_score  = (X_test_raw[:, asn_rate_idx] +
-                     X_test_raw[:, country_rate_idx]) / 2
+contextual_score  = (X_test_raw_aligned[:, asn_rate_idx] +
+                     X_test_raw_aligned[:, country_rate_idx]) / 2
 contextual_score  = contextual_score.clip(0, 1)
 
-behavioural_score = (X_test_raw[:, login_freq_idx] / 20 +
-                     X_test_raw[:, is_night_idx]) / 2
+behavioural_score = (X_test_raw_aligned[:, login_freq_idx] / 20 +
+                     X_test_raw_aligned[:, is_night_idx]) / 2
 behavioural_score = behavioural_score.clip(0, 1)
 
 ml_score    = 0.6 * rf_probs_aligned + 0.4 * lstm_probs
 risk_scores = (0.6 * ml_score + 0.2 * contextual_score +
                0.2 * behavioural_score) * 100
+risk_scores = np.clip(risk_scores, 0, 100)
 
-# Decision engine
-decisions = np.where(risk_scores < 34, 'ALLOW',
-            np.where(risk_scores < 67, 'STEP_UP_MFA', 'BLOCK'))
+# Decision engine — corrected thresholds (34/67)
+decisions = np.where(risk_scores < T1, 'ALLOW',
+            np.where(risk_scores < T2, 'STEP_UP_MFA', 'BLOCK'))
 
-# Binary: BLOCK = attack detected; ALLOW/STEP_UP = not blocked
-block_preds = (decisions == 'BLOCK').astype(int)
+# FIX: "Flagged" definition — BLOCK *and* STEP_UP_MFA both count as
+# detected/positive, matching the thesis's "Full Framework (Flagged)"
+# terminology and the binary_from_decision() logic used elsewhere.
+# (Previously this only counted BLOCK, which understates recall.)
+flagged_preds = (decisions != 'ALLOW').astype(int)
 
-ens_acc  = accuracy_score(y_test_aligned, block_preds)
-ens_rec  = recall_score(y_test_aligned, block_preds)
-ens_prec = precision_score(y_test_aligned, block_preds)
-ens_f1   = f1_score(y_test_aligned, block_preds)
+ens_acc  = accuracy_score(y_test_aligned, flagged_preds)
+ens_rec  = recall_score(y_test_aligned, flagged_preds)
+ens_prec = precision_score(y_test_aligned, flagged_preds)
+ens_f1   = f1_score(y_test_aligned, flagged_preds)
 ens_auc  = roc_auc_score(y_test_aligned, risk_scores / 100)
-tn3, fp3, fn3, tp3 = confusion_matrix(y_test_aligned, block_preds).ravel()
+tn3, fp3, fn3, tp3 = confusion_matrix(y_test_aligned, flagged_preds).ravel()
 ens_fpr  = fp3 / (fp3 + tn3) if (fp3 + tn3) > 0 else 0.0
 
-# Unnecessary Step-Up Rate: normal users routed to STEP_UP_MFA
 normal_mask = y_test_aligned == 0
 usr = (decisions[normal_mask] == 'STEP_UP_MFA').mean()
 
-print(f"\nFull Framework Results (Noisy Data)")
+print(f"\nFull Framework Results (Noisy Data, Flagged Definition)")
 print(f"  Accuracy  : {ens_acc*100:.2f}%")
 print(f"  Recall    : {ens_rec*100:.2f}%")
 print(f"  Precision : {ens_prec*100:.2f}%")
@@ -401,7 +387,6 @@ print(f"  FPR       : {ens_fpr*100:.2f}%")
 print(f"  USR       : {usr*100:.2f}%")
 print(f"  TP={tp3}  FP={fp3}  TN={tn3}  FN={fn3}")
 
-# Decision distribution
 allow_n   = (decisions == 'ALLOW').sum()
 stepup_n  = (decisions == 'STEP_UP_MFA').sum()
 block_n   = (decisions == 'BLOCK').sum()
@@ -413,7 +398,7 @@ print(f"  BLOCK       : {block_n:,}  ({block_n/total_n*100:.1f}%)")
 
 # ── Summary ────────────────────────────────────────────────────
 print("\n" + "=" * 60)
-print("PHASE 9 COMPLETE — SUMMARY")
+print("PHASE 9 (CLEAN) COMPLETE — SUMMARY")
 print("=" * 60)
 print(f"{'Model':<30} {'Acc':>8} {'Recall':>8} {'Prec':>8} "
       f"{'F1':>8} {'FPR':>8}")
@@ -424,7 +409,7 @@ print(f"{'Random Forest (noisy)':<30} "
 print(f"{'LSTM (noisy)':<30} "
       f"{lstm_acc*100:>7.2f}% {lstm_rec*100:>7.2f}% "
       f"{lstm_prec*100:>7.2f}% {lstm_f1*100:>7.2f}% {lstm_fpr*100:>7.2f}%")
-print(f"{'Full Framework (noisy)':<30} "
+print(f"{'Full Framework (flagged)':<30} "
       f"{ens_acc*100:>7.2f}% {ens_rec*100:>7.2f}% "
       f"{ens_prec*100:>7.2f}% {ens_f1*100:>7.2f}% {ens_fpr*100:>7.2f}%")
 print(f"\nUSR (Unnecessary Step-Up Rate): {usr*100:.2f}%")
@@ -433,4 +418,4 @@ print(f"  {RF_PATH}")
 print(f"  {LSTM_PATH}")
 print(f"  {SCALER_PATH}")
 print(f"  {SPLIT_PATH}")
-print("\nNext step: run 5_evaluate.py and paste results here.")
+print("\nNext step: run 11_evaluate_clean.py to verify reproducibility.")

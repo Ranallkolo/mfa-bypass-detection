@@ -19,3 +19,4 @@ __pycache__/
 *.pyc
 venv/
 .env
+models_backup/

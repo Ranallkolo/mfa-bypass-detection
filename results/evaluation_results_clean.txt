@@ -1,0 +1,99 @@
+
+========================================
+1. IN-DISTRIBUTION (Full Framework, Flagged)
+========================================
+Accuracy:  0.9673  (target >= 0.95)
+Recall:    0.9692  (target >= 0.90)
+Precision: 0.9655 (target >= 0.92)
+F1-Score:  0.9674  (target >= 0.91)
+FPR:       0.0347  (target <= 0.05)
+ROC-AUC:   0.9968
+Confusion Matrix:
+  TN=19301  FP=693
+  FN=615  TP=19381
+USR:       0.0326  (target <= 0.08)
+
+========================================
+2. RF ONLY (Ablation)
+========================================
+Accuracy:  0.9714  (target >= 0.95)
+Recall:    0.9653  (target >= 0.90)
+Precision: 0.9772 (target >= 0.92)
+F1-Score:  0.9712  (target >= 0.91)
+FPR:       0.0225  (target <= 0.05)
+ROC-AUC:   0.9968
+Confusion Matrix:
+  TN=19544  FP=450
+  FN=693  TP=19303
+
+========================================
+3. LSTM ONLY (Ablation)
+========================================
+Accuracy:  0.9645  (target >= 0.95)
+Recall:    0.9586  (target >= 0.90)
+Precision: 0.9701 (target >= 0.92)
+F1-Score:  0.9643  (target >= 0.91)
+FPR:       0.0296  (target <= 0.05)
+ROC-AUC:   0.9958
+Confusion Matrix:
+  TN=19403  FP=591
+  FN=828  TP=19168
+
+========================================
+4. STATIC MFA BASELINE
+========================================
+Accuracy:  0.6921  (target >= 0.95)
+Recall:    0.4849  (target >= 0.90)
+Precision: 0.8282 (target >= 0.92)
+F1-Score:  0.6117  (target >= 0.91)
+FPR:       0.1006  (target <= 0.05)
+Confusion Matrix:
+  TN=17982  FP=2012
+  FN=10299  TP=9697
+
+========================================
+5. ML FUSION ONLY (Ablation, no ctx/beh)
+========================================
+Accuracy:  0.9673  (target >= 0.95)
+Recall:    0.9802  (target >= 0.90)
+Precision: 0.9555 (target >= 0.92)
+F1-Score:  0.9677  (target >= 0.91)
+FPR:       0.0456  (target <= 0.05)
+ROC-AUC:   0.9968
+Confusion Matrix:
+  TN=19082  FP=912
+  FN=396  TP=19600
+USR:       0.0333
+
+========================================
+6. BEHAVIOURAL ONLY (Ablation, no reputation, OR-rule reconstruction)
+========================================
+Accuracy:  0.4872  (target >= 0.95)
+Recall:    0.6284  (target >= 0.90)
+Precision: 0.4900 (target >= 0.92)
+F1-Score:  0.5506  (target >= 0.91)
+FPR:       0.6540  (target <= 0.05)
+Confusion Matrix:
+  TN=6917  FP=13077
+  FN=7431  TP=12565
+USR (proxy, = FPR for this binary rule): 0.6540
+
+========================================
+7. OOD TEST SET (Primary Reported Result)
+========================================
+Accuracy:  0.9988  (target >= 0.95)
+Recall:    1.0000  (target >= 0.90)
+Precision: 0.9977 (target >= 0.92)
+F1-Score:  0.9989  (target >= 0.91)
+FPR:       0.0023  (target <= 0.05)
+ROC-AUC:   1.0000
+Confusion Matrix:
+  TN=9974  FP=23
+  FN=0  TP=9993
+
+OOD Per-Attack-Type Recall:
+  sim_swap: recall=1.0000 (n=2498)
+  aitm_phishing: recall=1.0000 (n=2499)
+  session_hijacking: recall=1.0000 (n=2499)
+  mfa_fatigue: recall=1.0000 (n=2497)
+OOD USR: 0.0023  (target <= 0.08)
