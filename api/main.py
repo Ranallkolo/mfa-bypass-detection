@@ -9,12 +9,15 @@ import sqlite3
 import time
 from datetime import datetime
 import warnings
+import os
 warnings.filterwarnings('ignore')
 
-RF_PATH     = '/home/da_otcifithom/mfa-bypass-detection/models/rf_model.pkl'
-LSTM_PATH   = '/home/da_otcifithom/mfa-bypass-detection/models/lstm_model.pt'
-SCALER_PATH = '/home/da_otcifithom/mfa-bypass-detection/models/scaler.pkl'
-DB_PATH     = '/home/da_otcifithom/mfa-bypass-detection/logs/audit.db'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RF_PATH     = os.path.join(BASE_DIR, '..', 'models', 'rf_model.pkl')
+LSTM_PATH   = os.path.join(BASE_DIR, '..', 'models', 'lstm_model.pt')
+SCALER_PATH = os.path.join(BASE_DIR, '..', 'models', 'scaler.pkl')
+DB_PATH     = os.path.join(BASE_DIR, '..', 'logs', 'audit.db')
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 SEQ_LEN     = 10
 INPUT_SIZE  = 15
 
