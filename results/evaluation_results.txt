@@ -1,0 +1,65 @@
+
+========================================
+1. IN-DISTRIBUTION (Full Framework)
+========================================
+Accuracy:  1.0000  (target >= 0.95)
+Recall:    1.0000  (target >= 0.90)
+Precision: 1.0000 (target >= 0.92)
+F1-Score:  1.0000  (target >= 0.91)
+FPR:       0.0000  (target <= 0.05)
+ROC-AUC:   1.0000
+Confusion Matrix:
+  TN=19999  FP=0
+  FN=0  TP=20000
+USR:       0.0000  (target <= 0.08)
+
+========================================
+2. RF ONLY (Ablation)
+========================================
+Accuracy:  1.0000  (target >= 0.95)
+Recall:    1.0000  (target >= 0.90)
+Precision: 1.0000 (target >= 0.92)
+F1-Score:  1.0000  (target >= 0.91)
+FPR:       0.0000  (target <= 0.05)
+ROC-AUC:   1.0000
+Confusion Matrix:
+  TN=19999  FP=0
+  FN=0  TP=20000
+
+========================================
+3. LSTM ONLY (Ablation)
+========================================
+Accuracy:  0.9515  (target >= 0.95)
+Recall:    0.9031  (target >= 0.90)
+Precision: 1.0000 (target >= 0.92)
+F1-Score:  0.9491  (target >= 0.91)
+FPR:       0.0000  (target <= 0.05)
+ROC-AUC:   0.9859
+Confusion Matrix:
+  TN=19999  FP=0
+  FN=1938  TP=18062
+
+========================================
+4. STATIC MFA BASELINE
+========================================
+Accuracy:  0.8556  (target >= 0.95)
+Recall:    0.8098  (target >= 0.90)
+Precision: 0.8914 (target >= 0.92)
+F1-Score:  0.8487  (target >= 0.91)
+FPR:       0.0987  (target <= 0.05)
+Confusion Matrix:
+  TN=18026  FP=1973
+  FN=3803  TP=16197
+
+========================================
+5. OOD TEST SET (Primary Reported Result)
+========================================
+Accuracy:  0.9930  (target >= 0.95)
+Recall:    0.9861  (target >= 0.90)
+Precision: 1.0000 (target >= 0.92)
+F1-Score:  0.9930  (target >= 0.91)
+FPR:       0.0000  (target <= 0.05)
+ROC-AUC:   1.0000
+Confusion Matrix:
+  TN=9999  FP=0
+  FN=139  TP=9861

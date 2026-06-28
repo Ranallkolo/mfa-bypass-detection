@@ -1,0 +1,8 @@
+LATENCY BENCHMARK RESULTS
+Runs: 1000
+Mean:   47.36 ms
+Median: 47.25 ms
+P95:    49.65 ms
+P99:    54.40 ms
+Min:    35.42 ms
+Max:    60.77 ms

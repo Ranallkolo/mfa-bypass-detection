@@ -1,0 +1,21 @@
+# Datasets - too large for git
+rba-dataset.csv
+data/*.csv
+data/*.npz
+
+# Backup archive
+mfa_project_backup.tar.gz
+
+# Jupyter junk
+.ipynb_checkpoints/
+api/.ipynb_checkpoints/
+Untitled.ipynb
+*.ipynb_checkpoints
+
+# Logs / runtime
+logs/audit.db
+logs/*.db
+__pycache__/
+*.pyc
+venv/
+.env
