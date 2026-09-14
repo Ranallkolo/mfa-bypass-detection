@@ -2,7 +2,7 @@
 
 > An AI-driven proof-of-concept for detecting and responding to Multi-Factor Authentication (MFA) bypass attack patterns — undergraduate thesis project, Air Force Institute of Technology (AFIT), Kaduna.
 
-**Live demo:** https://mfa-bypass-detection.onrender.com
+**Live demo:** (https://mfa-bypass-detection-1.onrender.com/)
 
 The system fuses a Random Forest and an LSTM model with contextual network reputation signals and behavioural heuristics into a single risk score `R`, then routes each login event to one of three tiers: **Allow**, **Step-Up MFA**, or **Block**. It targets four documented MFA bypass patterns: SIM swap, adversary-in-the-middle (AiTM) phishing, session hijacking, and MFA fatigue.
 
