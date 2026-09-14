@@ -1,15 +1,19 @@
 """
-ABLATION RETRAIN — Reputation-features-excluded Random Forest
+ABLATION RETRAIN v2 — Reputation-features-excluded Random Forest
+(now trained on the noise-injected, seed-corrected dataset for
+consistency with the main framework's retrained models)
 
 Purpose: replace the fabricated "Behavioural Only (OR-rule reconstruction)"
-row in evaluation_results_clean.txt with a genuine trained model. The
-original implementation for that ablation could not be located in the
-codebase (per the comment in 11_evaluate_clean.py, Eval 6), so this
-script trains a real RandomForestClassifier with asn_attack_rate and
-country_attack_rate removed from the feature set, using the exact same
-data, split, and hyperparameter approach as 3_train_rf.py.
+row with a genuine trained model. CORRECTION FROM v1: the first version
+of this script trained on the raw full_dataset.csv (pre-seed-fix,
+no noise injection), which is not on equal footing with the main RF/
+LSTM models (retrain_on_fixed_data.py), which DO use noise-injected
+data. This version applies the identical noise injection logic before
+training, so the ablation result is directly comparable to the full
+framework's reported numbers.
 
-Run this from inside the mfa-project-restored folder:
+Run this from inside the mfa-project-restored folder, AFTER running
+2_synthetic_fixed.py (so full_dataset.csv is the corrected version):
     python ablation_retrain.py
 
 Output: results/ablation_no_reputation_results.txt
@@ -52,13 +56,86 @@ REPUTATION_FEATURES = ['asn_attack_rate', 'country_attack_rate']
 ABLATED_FEATURE_COLS = [c for c in FULL_FEATURE_COLS if c not in REPUTATION_FEATURES]
 
 
+def inject_noise(df):
+    """Identical noise injection logic to 10_retrain_clean.py /
+    retrain_on_fixed_data.py, so this ablation is trained under the
+    same realistic-overlap conditions as the main framework."""
+    attacks = df[df['label'] == 1].copy()
+    normals = df[df['label'] == 0].copy()
+    n_attacks = len(attacks)
+    n_normals = len(normals)
+
+    mask = np.random.random(n_attacks) < 0.30
+    attacks.loc[mask, 'browser_known'] = 1
+
+    mask = np.random.random(n_attacks) < 0.35
+    attacks.loc[mask, 'is_night'] = 0
+    attacks.loc[mask, 'hour'] = np.random.randint(9, 18, size=mask.sum())
+
+    mask = np.random.random(n_attacks) < 0.40
+    attacks.loc[mask, 'is_attack_ip'] = 0
+
+    mask = np.random.random(n_attacks) < 0.25
+    attacks.loc[mask, 'country_changed'] = 0
+
+    mask = np.random.random(n_attacks) < 0.20
+    attacks.loc[mask, 'device_changed'] = 0
+
+    mask = np.random.random(n_attacks) < 0.20
+    attacks.loc[mask, 'asn_changed'] = 0
+
+    mask = np.random.random(n_attacks) < 0.35
+    attacks.loc[mask, 'asn_attack_rate'] = np.random.uniform(0.0, 0.15, size=mask.sum())
+    attacks.loc[mask, 'country_attack_rate'] = np.random.uniform(0.0, 0.15, size=mask.sum())
+
+    noise = np.random.normal(0, 0.12, size=(n_attacks, 2))
+    attacks[['asn_attack_rate', 'country_attack_rate']] = (
+        attacks[['asn_attack_rate', 'country_attack_rate']].values + noise
+    ).clip(0, 1)
+
+    mask = np.random.random(n_normals) < 0.15
+    normals.loc[mask, 'country_changed'] = 1
+    normals.loc[mask, 'asn_changed'] = 1
+
+    mask = np.random.random(n_normals) < 0.12
+    normals.loc[mask, 'device_changed'] = 1
+
+    mask = np.random.random(n_normals) < 0.15
+    normals.loc[mask, 'is_night'] = 1
+    normals.loc[mask, 'hour'] = np.random.choice(
+        list(range(22, 24)) + list(range(0, 7)), size=mask.sum())
+
+    mask = np.random.random(n_normals) < 0.08
+    normals.loc[mask, 'login_freq'] = np.random.randint(10, 21, size=mask.sum())
+
+    mask = np.random.random(n_normals) < 0.10
+    normals.loc[mask, 'asn_attack_rate'] = np.random.uniform(0.1, 0.4, size=mask.sum())
+
+    noise = np.random.normal(0, 0.05, size=(n_normals, 2))
+    normals[['asn_attack_rate', 'country_attack_rate']] = (
+        normals[['asn_attack_rate', 'country_attack_rate']].values + noise
+    ).clip(0, 1)
+
+    df_noisy = pd.concat([attacks, normals], ignore_index=True).sample(
+        frac=1, random_state=RANDOM_SEED).reset_index(drop=True)
+    return df_noisy
+
+
 def main():
     print("=" * 60)
-    print("ABLATION RETRAIN — REPUTATION FEATURES EXCLUDED")
+    print("ABLATION RETRAIN v2 — REPUTATION FEATURES EXCLUDED")
+    print("(noise-injected, consistent with main framework)")
     print("=" * 60)
+
+    np.random.seed(RANDOM_SEED)
 
     df = pd.read_csv(DATA_PATH)
     print(f"\nLoaded: {df.shape}")
+
+    print("Applying noise injection (same logic as main retrain)...")
+    df = inject_noise(df)
+    print(f"Noisy dataset: {df.shape}")
+
     print(f"Full feature set    : {FULL_FEATURE_COLS}")
     print(f"Ablated feature set : {ABLATED_FEATURE_COLS}")
     print(f"Removed             : {REPUTATION_FEATURES}")

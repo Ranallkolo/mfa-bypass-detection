@@ -7,30 +7,30 @@ This replaces the previous 'Behavioural Only (OR-rule
 reconstruction)' row, which was a hand-coded approximation,
 not a trained model (see 11_evaluate_clean.py Eval 6 comment).
 
-Accuracy:  0.9933
-Recall:    0.9931
-Precision: 0.9934
-F1-Score:  0.9933
-FPR:       0.0066
-ROC-AUC:   0.9997
+Accuracy:  0.9400
+Recall:    0.9557
+Precision: 0.9266
+F1-Score:  0.9409
+FPR:       0.0757
+ROC-AUC:   0.9854
 Confusion Matrix:
-  TN=19869  FP=131
-  FN=138  TP=19862
+  TN=18485  FP=1515
+  FN=886  TP=19114
 
 Feature importances (ablated model):
-   1. is_attack_ip              0.2528
-   2. login_success             0.2286
-   3. login_freq                0.1719
-   4. device_changed            0.0790
-   5. country_changed           0.0733
-   6. hour                      0.0565
-   7. is_night                  0.0542
-   8. asn_changed               0.0457
-   9. browser_known             0.0210
-  10. device_mobile             0.0092
-  11. device_desktop            0.0047
-  12. day_of_week               0.0017
-  13. device_tablet             0.0016
+   1. login_success             0.3416
+   2. login_freq                0.2679
+   3. is_attack_ip              0.1159
+   4. device_changed            0.0607
+   5. asn_changed               0.0543
+   6. country_changed           0.0472
+   7. hour                      0.0365
+   8. browser_known             0.0244
+   9. device_desktop            0.0160
+  10. device_mobile             0.0146
+  11. day_of_week               0.0087
+  12. is_night                  0.0070
+  13. device_tablet             0.0052
 
 For comparison, cite the full-feature model's reported
 metrics from results/evaluation_results_clean.txt (RF ONLY
