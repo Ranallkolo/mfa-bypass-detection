@@ -1,0 +1,51 @@
+============================================================
+1. BOOTSTRAP CONFIDENCE INTERVALS (95%), n_boot=1000
+   Full Framework, in-distribution test set
+============================================================
+  accuracy    : point=0.9688  95% CI=[0.9672, 0.9705]
+  recall      : point=0.9711  95% CI=[0.9689, 0.9735]
+  precision   : point=0.9667  95% CI=[0.9642, 0.9690]
+  f1          : point=0.9689  95% CI=[0.9672, 0.9706]
+  fpr         : point=0.0335  95% CI=[0.0311, 0.0360]
+  roc_auc     : point=0.9917  95% CI=[0.9908, 0.9925]
+  pr_auc      : point=0.9936  95% CI=[0.9930, 0.9942]
+
+============================================================
+2. PR-AUC (point estimate, imbalanced-deployment relevant)
+============================================================
+  PR-AUC: 0.9936
+  ROC-AUC: 0.9917
+  Note: PR-AUC is generally more informative than ROC-AUC
+  under class imbalance, which is why it is reported
+  alongside ROC-AUC here per the reviewer's request.
+
+============================================================
+3. REALISTIC BASE-RATE RE-EVALUATION
+============================================================
+IMPORTANT CAVEAT: the normal-class pool available here is
+itself only a 1% sample of real normal traffic from the
+original RBA dataset (see 1_preprocess.py,
+NORMAL_SAMPLE_RATE=0.01), not the full real-world population.
+Results below should be read as indicative of the trend,
+not as a substitute for evaluation on the full unsampled
+normal-traffic population.
+
+--- Target prevalence: 1% ---
+  Total events (resampled): 20,196  (attacks: 202)
+  Accuracy:  0.9665
+  Recall:    0.9604
+  Precision: 0.2248
+  F1-Score:  0.3643
+  FPR:       0.0335
+  FP per million authentications: 33,125.4
+  PR-AUC:    0.8474
+
+--- Target prevalence: 0.1% ---
+  Total events (resampled): 20,014  (attacks: 20)
+  Accuracy:  0.9666
+  Recall:    1.0000
+  Precision: 0.0290
+  F1-Score:  0.0564
+  FPR:       0.0335
+  FP per million authentications: 33,426.6
+  PR-AUC:    0.6352
